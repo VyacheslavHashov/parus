@@ -1,0 +1,16 @@
+void main()
+{
+    fib(10);
+}
+
+i64 fib(i64 n) 
+{
+    if (n == 1) {
+        return 1;
+    }
+    if (n == 2 {
+        return 2;
+    }
+    return fib(n-2) + fib(n-1);
+}
+

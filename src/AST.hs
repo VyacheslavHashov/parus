@@ -8,14 +8,22 @@ data Type = Void | Bool | I8 | I16 | I32 | I64
 data BinOpType = OpPlus | OpMinus | OpProduct | OpDivision
                | OpGt | OpGte | OpLe | OpLte | OpEq | OpNeq
                | OpNot | OpAnd | OpOr
+               deriving Show
 
 data UnOpType = OpNot
+   deriving Show
 
+----------------------------------
+type Program = [GlInstruction]
 
-data Expr = BinOp BinOpType Expr Expr
-          | UnOp UnOpType Expr
-          | FunApply Name [Expr]
-          | Atom Int
+data GlInstruction = GlVarDecl Name Type
+                   | FunDecl Name [ArgDecl] CodeBlock Type
+                   deriving Show
+
+data ArgDecl = ArgDecl Name Type
+    deriving Show
+
+type CodeBlock = [Instruction]
 
 data Instruction = VarDecl Name Type
                  | Assign Name Expr
@@ -23,12 +31,15 @@ data Instruction = VarDecl Name Type
                  | IfBlock Expr CodeBlock
                  | IfElseBlock Expr CodeBlock CodeBlock
                  | WhileBlock Expr CodeBlock
+                 deriving Show
 
-type CodeBlock = [Instruction]
+data Expr = BinOp BinOpType Expr Expr
+          | UnOp UnOpType Expr
+          | FunApply Name [Expr]
+          | Atom Int
+          deriving Show
 
-data ArgDecl = ArgDecl Name Type
 
-data GlInstruction = GlVarDecl Name Type
-                   | FunDecl Name [ArgDecl] CodeBlock Type
 
-type Program = [GlInstruction]
+
+
