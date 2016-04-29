@@ -3,7 +3,7 @@ void main()
     fib(10);
 }
 
-i64 fib(i64 n) 
+int fib(int n) 
 {
     if (n == 1) {
         return 1;
@@ -14,3 +14,16 @@ i64 fib(i64 n)
     return fib(n-2) + fib(n-1);
 }
 
+float f()
+{
+    float a;
+    float b;
+    int n;
+    bool c;
+    bool d;
+    c = true;
+    d = false;
+    a = 1.333;
+    b = -5.444;
+    n = -11;
+}
