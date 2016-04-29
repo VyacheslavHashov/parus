@@ -4,10 +4,11 @@ type Name = String
 
 data Type = Void | Bool | I8 | I16 | I32 | I64
           | U8 | U16 | U32 | U64
+          deriving Show
 
 data BinOpType = OpPlus | OpMinus | OpProduct | OpDivision
-               | OpGt | OpGte | OpLe | OpLte | OpEq | OpNeq
-               | OpNot | OpAnd | OpOr
+               | OpGt | OpGte | OpLt | OpLte | OpEq | OpNeq
+               | OpAnd | OpOr
                deriving Show
 
 data UnOpType = OpNot
