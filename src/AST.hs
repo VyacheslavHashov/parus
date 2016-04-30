@@ -46,6 +46,7 @@ data RawInstruction = RawVarDecl Name PrimType
                     | RawIfBlock RawExpr RawCodeBlock
                     | RawIfElseBlock RawExpr RawCodeBlock RawCodeBlock
                     | RawWhileBlock RawExpr RawCodeBlock
+                    | RawExpr RawExpr
                     deriving Show
 
 data RawExpr = RawBinOpAr BinOpArType RawExpr RawExpr

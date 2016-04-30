@@ -64,94 +64,90 @@ import AST
 
 
 Program 
-    : program_                  { reverse $1}
+    : program_                  { reverse $1 }
 
 program_ 
-    : GlInstruction  { [$1] }
-    | program_ GlInstruction { $2 : $1 }
+    : GlInstruction             { [$1] }
+    | program_ GlInstruction    { $2 : $1 }
 
 GlInstruction 
-    : Type ident ';' { RawGlVarDecl $2 $1 }
-    | Type ident '(' ArgDeclList ')' CodeBlock { RawFunDecl $2 $4 $6 $1 }
+    : Type ident ';'            { RawGlVarDecl $2 $1 }
+    | Type ident '(' ArgDeclList 
+      ')' CodeBlock             { RawFunDecl $2 $4 $6 $1 }
 
 ArgDeclList 
-    : {-empty -}         { [] }
-    | ArgDecl ArgDeclList1 { $1 : $2 }
+    : {-empty -}                { [] }
+    | ArgDecl ArgDeclList1      { $1 : $2 }
 
 ArgDeclList1
-    : {- empty -}       { [] }
-    | ',' ArgDecl ArgDeclList1 { $2 : $3 }
+    : {- empty -}               { [] }
+    | ',' ArgDecl ArgDeclList1  { $2 : $3 }
 
 ArgDecl 
-    : Type ident   { RawArgDecl $2 $1 }
+    : Type ident                { RawArgDecl $2 $1 }
 
 CodeBlock 
-    : '{' codeblock_ '}'      { reverse $2 }
+    : '{' codeblock_ '}'        { reverse $2 }
 
 codeblock_ 
-    : Instruction { [$1] }
-    | codeblock_ Instruction { $2 : $1 }
+    : Instruction               { [$1] }
+    | codeblock_ Instruction    { $2 : $1 }
 
 Instruction 
-    : Type ident ';'   { RawVarDecl $2 $1 }
-    | ident '=' Expr ';' { RawAssign $1 $3 }
-    | return ';'   { RawReturn Nothing }
-    | return Expr ';' { RawReturn $ Just $2 }
-    | if '(' Expr ')' CodeBlock else CodeBlock { RawIfElseBlock $3 $5 $7 }
+    : Type ident ';'            { RawVarDecl $2 $1 }
+    | ident '=' Expr ';'        { RawAssign $1 $3 }
+    | return ';'                { RawReturn Nothing }
+    | return Expr ';'           { RawReturn $ Just $2 }
+    | if '(' Expr ')' CodeBlock 
+      else CodeBlock            { RawIfElseBlock $3 $5 $7 }
     | if '(' Expr ')' CodeBlock { RawIfBlock $3 $5 }
-    | while '(' Expr ')' CodeBlock { RawWhileBlock $3 $5 }
+    | while '(' Expr ')' 
+      CodeBlock                 { RawWhileBlock $3 $5 }
+    | Expr ';'                  { RawExpr $1 }
 
 Expr 
-    : Expr BinOpArType Expr     { RawBinOpAr $2 $1 $3 }
-    | Expr BinOpLogType Expr    { RawBinOpLog $2 $1 $3 }
-    | UnOpArType Expr  %prec NEG  { RawUnOpAr $1 $2 }
-    | UnOpLogType Expr            { RawUnOpLog $1 $2 }
-    | ident '(' ArgList ')'  { RawFunApply $1 $3 }
-    | literal                     { RawLiteral $1 }
-    | boolLiteral                 { $1 }
-    | ident                       { RawIdent $1 }
-    | '(' Expr ')'                { $2 }
+    : Expr '+' Expr             { RawBinOpAr OpPlus $1 $3 }
+    | Expr '-' Expr             { RawBinOpAr OpMinus $1 $3 }
+    | Expr '*' Expr             { RawBinOpAr OpProduct $1 $3 }
+    | Expr '/' Expr             { RawBinOpAr OpDivision $1 $3 }
 
-BinOpArType
-    : '+'   { OpPlus }
-    | '-'   { OpMinus }
-    | '*'   { OpProduct }
-    | '/'   { OpDivision }
+    | Expr '>' Expr             { RawBinOpLog OpGt $1 $3 }
+    | Expr '>=' Expr            { RawBinOpLog OpGte $1 $3 }
+    | Expr '<' Expr             { RawBinOpLog OpLt $1 $3 }
+    | Expr '<=' Expr            { RawBinOpLog OpLte $1 $3 }
+    | Expr '==' Expr            { RawBinOpLog OpEq $1 $3 }
+    | Expr '!=' Expr            { RawBinOpLog OpNeq $1 $3 }
+    | Expr '&&' Expr            { RawBinOpLog OpAnd $1 $3 }
+    | Expr '||' Expr            { RawBinOpLog OpOr $1 $3 }
+    | '(' Expr ')'              { $2 }
 
-BinOpLogType
-    : '>'   { OpGt }
-    | '>='  { OpGte }
-    | '<'   { OpLt }
-    | '<='  { OpLte }
-    | '=='  { OpEq }
-    | '!='  { OpNeq }
-    | '&&'  { OpAnd }
-    | '||'  { OpOr }
+    | '-' Expr  %prec NEG       { RawUnOpAr OpNegate $2 }
+    | '!' Expr                  { RawUnOpLog OpNot $2 }
 
-UnOpLogType
-    : '!'   { OpNot }
+    | ident '(' ArgList ')'     { RawFunApply $1 $3 }
+    | literal                   { RawLiteral $1 }
+    | boolLiteral               { $1 }
+    | ident                     { RawIdent $1 }
 
-UnOpArType
-    : '-'   { OpNegate }
 
 ArgList 
-    : {- empty -}         { [] }
-    | Expr ArgList1 { $1 : $2 }
+    : {- empty -}               { [] }
+    | Expr ArgList1             { $1 : $2 }
 
 ArgList1
-    : {- empty -}   { [] }
-    | ',' Expr ArgList1 { $2 : $3 }
+    : {- empty -}               { [] }
+    | ',' Expr ArgList1         { $2 : $3 }
 
 boolLiteral
-    : true      { RawBoolLiteral True }
-    | false     { RawBoolLiteral False }
+    : true                      { RawBoolLiteral True }
+    | false                     { RawBoolLiteral False }
 
 Type
-    : void      { TVoid }
-    | bool      { TBool }
-    | int       { TInt }
-    | uint      { TUint }
-    | float     { TFloat }
+    : void                      { TVoid }
+    | bool                      { TBool }
+    | int                       { TInt }
+    | uint                      { TUint }
+    | float                     { TFloat }
 
 {
 parseError :: [Lexeme] -> Except String a
