@@ -10,8 +10,8 @@ $whitechar = [ \t\r\n\f\v]
 $alpha = [a-zA-Z]
 $digit = [0-9]
 
-@number = \-?[$digit]+
-@float = \-?[$digit]*\.[$digit]+
+@number = [$digit]+
+@float = [$digit]*\.[$digit]+
 @ident = $alpha($alpha|_|$digit)*
 
 tokens :-

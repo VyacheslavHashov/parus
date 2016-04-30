@@ -7,44 +7,60 @@ import AST
 }
 
 -- Lexer structure
-%tokentype { Token }
+%tokentype { Lexeme }
 
 -- Entry point
 %name program
 
 -- Parser monad
-%monad {Except String} { (>>=) } { pure }
+%monad { Except String } { (>>=) } { pure }
 %error { parseError }
 
 %token
-   int      { TInt $$ }
-   ident    { TIdent $$ }
-   '+'      { TPlus }
-   '-'      { TMinus }
-   '*'      { TProduct }
-   '/'      { TDiv }
-   '!'      { TNot }
-   '&&'     { TAnd }
-   '||'     { TOr }
-   '>'      { TGt }
-   '>='     { TGte }
-   '<'      { TLt }
-   '<='     { TLte }
-   '=='     { TEq }
-   '!='     { TNeq }
-   if       { TIf }
-   else     { TElse }
-   while    { TWhile }
-   return   { TReturn }
-   '='      { TAssign }
-   ','      { TComma }
-   ';'      { TSemicolon }
-   '('      { TLeftParen }
-   ')'      { TRightParen }
-   '{'      { TLeftBracket }
-   '}'      { TRightBracket }
-%%
+   literal  { L _ (LLiteral $$) _ }
+   ident    { L _ (LIdent $$) _ }
+   true     { L _ LTrue _ }
+   false    { L _ LFalse _ }
+   void     { L _ LVoid _ }
+   bool     { L _ LBool _ }
+   int      { L _ LInt _ }
+   uint     { L _ LUint _ }
+   float    { L _ LFloat _ }
+   '+'      { L _ LPlus _ }
+   '-'      { L _ LMinus _ }
+   '*'      { L _ LProduct _ }
+   '/'      { L _ LDiv _ }
+   '>'      { L _ LGt _ }
+   '>='     { L _ LGte _ }
+   '<'      { L _ LLt _ }
+   '<='     { L _ LLte _ }
+   '=='     { L _ LEq _ }
+   '!='     { L _ LNeq _ }
+   '&&'     { L _ LAnd _ }
+   '||'     { L _ LOr _ }
+   '!'      { L _ LNot _ }
+   if       { L _ LIf _ }
+   else     { L _ LElse _ }
+   while    { L _ LWhile _ }
+   return   { L _ LReturn _ }
+   '='      { L _ LAssign _ }
+   ','      { L _ LComma _ }
+   ';'      { L _ LSemicolon _ }
+   '('      { L _ LLeftParen _ }
+   ')'      { L _ LRightParen _ }
+   '{'      { L _ LLeftBracket _ }
+   '}'      { L _ LRightBracket _ }
 
+%left '||'
+%left '&&'
+%left '==' '!='
+%left '<' '<=' '>' '>='
+%left '+' '-'
+%left '*' '/'
+%right '!'
+%right NEG
+
+%%
 
 
 Program 
@@ -55,62 +71,90 @@ program_
     | program_ GlInstruction { $2 : $1 }
 
 GlInstruction 
-    : ident ident ';' { GlVarDecl $2 $1 }
-    | ident ident '(' ArgDeclList ')' CodeBlock { FunDecl $2 $4 $6 $1 }
+    : Type ident ';' { RawGlVarDecl $2 $1 }
+    | Type ident '(' ArgDeclList ')' CodeBlock { RawFunDecl $2 $4 $6 $1 }
 
 ArgDeclList 
-    : ArgDecl         { [$1] }
-    | ArgDecl ',' ArgDeclList { $1 : $3 }
+    : {-empty -}         { [] }
+    | ArgDecl ArgDeclList1 { $1 : $2 }
+
+ArgDeclList1
+    : {- empty -}       { [] }
+    | ',' ArgDecl ArgDeclList1 { $2 : $3 }
 
 ArgDecl 
-    : ident ident   { ArgDecl $2 $1 }
+    : Type ident   { RawArgDecl $2 $1 }
 
 CodeBlock 
-    : codeblock_      { reverse $1 }
+    : '{' codeblock_ '}'      { reverse $2 }
 
 codeblock_ 
     : Instruction { [$1] }
     | codeblock_ Instruction { $2 : $1 }
 
 Instruction 
-    : ident ident ';'   { VarDecl $2 $1 }
-    | ident '=' Expr ';' { Assign $1 $3 }
-    | return ';'   { Return Nothing }
-    | return Expr ';' { Return $ Just $2 }
-    | if '(' Expr ')' CodeBlock else CodeBlock { IfElseBlock $3 $5 $7 }
-    | if '(' Expr ')' CodeBlock { IfBlock $3 $5 }
-    | while '(' Expr ')' CodeBlock { WhileBlock $3 $5 }
+    : Type ident ';'   { RawVarDecl $2 $1 }
+    | ident '=' Expr ';' { RawAssign $1 $3 }
+    | return ';'   { RawReturn Nothing }
+    | return Expr ';' { RawReturn $ Just $2 }
+    | if '(' Expr ')' CodeBlock else CodeBlock { RawIfElseBlock $3 $5 $7 }
+    | if '(' Expr ')' CodeBlock { RawIfBlock $3 $5 }
+    | while '(' Expr ')' CodeBlock { RawWhileBlock $3 $5 }
 
 Expr 
-    : Expr BinOpType Expr     { BinOp $2 $1 $3 }
-    | UnOpType Expr           { UnOp $1 $2 }
-    | ident '(' ArgList ')'  { FunApply $1 $3 }
-    | int                     { Atom $1 }
+    : Expr BinOpArType Expr     { RawBinOpAr $2 $1 $3 }
+    | Expr BinOpLogType Expr    { RawBinOpLog $2 $1 $3 }
+    | UnOpArType Expr  %prec NEG  { RawUnOpAr $1 $2 }
+    | UnOpLogType Expr            { RawUnOpLog $1 $2 }
+    | ident '(' ArgList ')'  { RawFunApply $1 $3 }
+    | literal                     { RawLiteral $1 }
+    | boolLiteral                 { $1 }
+    | ident                       { RawIdent $1 }
+    | '(' Expr ')'                { $2 }
 
-BinOpType
+BinOpArType
     : '+'   { OpPlus }
     | '-'   { OpMinus }
     | '*'   { OpProduct }
     | '/'   { OpDivision }
-    | '&&'  { OpAnd }
-    | '||'  { OpOr }
-    | '>'   { OpGt }
+
+BinOpLogType
+    : '>'   { OpGt }
     | '>='  { OpGte }
     | '<'   { OpLt }
     | '<='  { OpLte }
     | '=='  { OpEq }
     | '!='  { OpNeq }
+    | '&&'  { OpAnd }
+    | '||'  { OpOr }
 
-UnOpType
+UnOpLogType
     : '!'   { OpNot }
 
-ArgList 
-    : Expr         { [$1] }
-    | Expr ',' ArgDeclList { $1 : $3 }
+UnOpArType
+    : '-'   { OpNegate }
 
+ArgList 
+    : {- empty -}         { [] }
+    | Expr ArgList1 { $1 : $2 }
+
+ArgList1
+    : {- empty -}   { [] }
+    | ',' Expr ArgList1 { $2 : $3 }
+
+boolLiteral
+    : true      { RawBoolLiteral True }
+    | false     { RawBoolLiteral False }
+
+Type
+    : void      { TVoid }
+    | bool      { TBool }
+    | int       { TInt }
+    | uint      { TUint }
+    | float     { TFloat }
 
 {
-parseError :: [Token] -> Except String a
+parseError :: [Lexeme] -> Except String a
 parseError (t:ts) = throwError $ show t
 parseError [] = throwError "Unexpected end of input"
 }

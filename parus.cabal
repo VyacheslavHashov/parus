@@ -1,6 +1,6 @@
 name:                parus
 version:             0.1.0.0
-synopsis:            Imperatie language project template from stack
+synopsis:            Small imperative language 
 homepage:            https://github.com/vyacheslavhashov/parus#readme
 
 license:             BSD3

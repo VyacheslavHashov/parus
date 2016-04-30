@@ -18,6 +18,9 @@ data BinOpLogType = OpGt | OpGte | OpLt | OpLte | OpEq | OpNeq
                   | OpAnd | OpOr
     deriving Show
 
+data UnOpArType = OpNegate
+    deriving Show
+
 data UnOpLogType = OpNot
    deriving Show
 
@@ -45,11 +48,13 @@ data RawInstruction = RawVarDecl Name PrimType
                     | RawWhileBlock RawExpr RawCodeBlock
                     deriving Show
 
-data RawExpr = RawBinArOp BinOpArType RawExpr RawExpr
-             | RawBinLogOp BinOpLogType RawExpr RawExpr
-             | RawUnOp UnOpLogType RawExpr
+data RawExpr = RawBinOpAr BinOpArType RawExpr RawExpr
+             | RawBinOpLog BinOpLogType RawExpr RawExpr
+             | RawUnOpAr UnOpArType RawExpr
+             | RawUnOpLog UnOpLogType RawExpr
              | RawFunApply Name [RawExpr]
              | RawLiteral String
+             | RawBoolLiteral Bool
              | RawIdent String
           deriving Show
 
