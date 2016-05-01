@@ -1,5 +1,8 @@
 module AST where
 
+import Data.Word
+import Data.Map as Map
+
 -- Types
 
 data PrimType = TVoid | TBool | TInt | TUint | TFloat
@@ -11,18 +14,13 @@ data Type = ValType PrimType -- types of values
 
 -- Operators
 
-data BinOpArType = OpPlus | OpMinus | OpProduct | OpDivision
+data BinOpType = OpPlus | OpMinus | OpProduct | OpDivision
+               | OpGt | OpGte | OpLt | OpLte | OpEq | OpNeq
+               | OpAnd | OpOr
     deriving Show
 
-data BinOpLogType = OpGt | OpGte | OpLt | OpLte | OpEq | OpNeq
-                  | OpAnd | OpOr
+data UnOpType = OpNegate | OpNot
     deriving Show
-
-data UnOpArType = OpNegate
-    deriving Show
-
-data UnOpLogType = OpNot
-   deriving Show
 
 type Name = String
 
@@ -49,24 +47,48 @@ data RawInstruction = RawVarDecl Name PrimType
                     | RawExpr RawExpr
                     deriving Show
 
-data RawExpr = RawBinOpAr BinOpArType RawExpr RawExpr
-             | RawBinOpLog BinOpLogType RawExpr RawExpr
-             | RawUnOpAr UnOpArType RawExpr
-             | RawUnOpLog UnOpLogType RawExpr
+data RawExpr = RawBinOp BinOpType RawExpr RawExpr
+             | RawUnOp UnOpType RawExpr
              | RawFunApply Name [RawExpr]
              | RawLiteral String
              | RawBoolLiteral Bool
-             | RawIdent String
+             | RawIdent Name
           deriving Show
 
+--
+-- AST
+--  after typechecking
+--
 
--- data Value = VoidValue ()
---            | BoolValue Bool
---            | IntValue Int
---            | UintValue Word64
---            | FloatValue Double
+data Value = VoidValue
+           | BoolValue Bool
+           | IntValue Int
+           | UintValue Word64
+           | FloatValue Double
 
+-- | Map of functions and global scope
 
+-- List af all variable names in code block
+type Scope = [Name]
+type FunTable = Map.Map Name CodeBlock
 
+data AST = AST { funTable :: FunTable
+               , glScope :: Scope
+               }
+data CodeBlock = CodeBlock { scope :: Scope
+                           , instructions :: [Instruction]
+                           }
+data Instruction = Assign Name Expr
+                 | Return Expr
+                 | IfBlock Expr CodeBlock
+                 | IfElseBlock Expr CodeBlock CodeBlock
+                 | WhileBlock Expr CodeBlock
+                 | Expr Expr
+
+data Expr = BinOp Expr Expr
+          | UnOp Expr Expr
+          | FunApply Name [Expr]
+          | Ident Name
+          | Value
 
 

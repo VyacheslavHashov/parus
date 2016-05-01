@@ -3,7 +3,7 @@ import Lexer
 import Parser
 
 main = do
-  s <- getContents
-  putStrLn $ case scanner s of
-    Right lst -> concatMap (\t -> "'" ++ show t ++ "' ") lst
-    Left err -> "ERROR: " ++ err
+    a <- readFile "samples/fib.txt"
+    let c = either (const []) id $ scanner a
+    print $ program c
+

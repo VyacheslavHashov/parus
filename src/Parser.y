@@ -106,23 +106,22 @@ Instruction
     | Expr ';'                  { RawExpr $1 }
 
 Expr 
-    : Expr '+' Expr             { RawBinOpAr OpPlus $1 $3 }
-    | Expr '-' Expr             { RawBinOpAr OpMinus $1 $3 }
-    | Expr '*' Expr             { RawBinOpAr OpProduct $1 $3 }
-    | Expr '/' Expr             { RawBinOpAr OpDivision $1 $3 }
-
-    | Expr '>' Expr             { RawBinOpLog OpGt $1 $3 }
-    | Expr '>=' Expr            { RawBinOpLog OpGte $1 $3 }
-    | Expr '<' Expr             { RawBinOpLog OpLt $1 $3 }
-    | Expr '<=' Expr            { RawBinOpLog OpLte $1 $3 }
-    | Expr '==' Expr            { RawBinOpLog OpEq $1 $3 }
-    | Expr '!=' Expr            { RawBinOpLog OpNeq $1 $3 }
-    | Expr '&&' Expr            { RawBinOpLog OpAnd $1 $3 }
-    | Expr '||' Expr            { RawBinOpLog OpOr $1 $3 }
+    : Expr '+' Expr             { RawBinOp OpPlus $1 $3 }
+    | Expr '-' Expr             { RawBinOp OpMinus $1 $3 }
+    | Expr '*' Expr             { RawBinOp OpProduct $1 $3 }
+    | Expr '/' Expr             { RawBinOp OpDivision $1 $3 }
+    | Expr '>' Expr             { RawBinOp OpGt $1 $3 }
+    | Expr '>=' Expr            { RawBinOp OpGte $1 $3 }
+    | Expr '<' Expr             { RawBinOp OpLt $1 $3 }
+    | Expr '<=' Expr            { RawBinOp OpLte $1 $3 }
+    | Expr '==' Expr            { RawBinOp OpEq $1 $3 }
+    | Expr '!=' Expr            { RawBinOp OpNeq $1 $3 }
+    | Expr '&&' Expr            { RawBinOp OpAnd $1 $3 }
+    | Expr '||' Expr            { RawBinOp OpOr $1 $3 }
     | '(' Expr ')'              { $2 }
 
-    | '-' Expr  %prec NEG       { RawUnOpAr OpNegate $2 }
-    | '!' Expr                  { RawUnOpLog OpNot $2 }
+    | '-' Expr  %prec NEG       { RawUnOp OpNegate $2 }
+    | '!' Expr                  { RawUnOp OpNot $2 }
 
     | ident '(' ArgList ')'     { RawFunApply $1 $3 }
     | literal                   { RawLiteral $1 }
