@@ -1,4 +1,20 @@
 void main()
 {
-    return;
+    int a;
+    int result;
+    a = 0;
+    result = 0;
+    while ( a > -1 && a <= 10000 )
+    {
+        result = result + a;
+        a = a + 1;
+    }
+    return result;
+}
+
+int c;
+
+int b()
+{
+    c = 44;
 }

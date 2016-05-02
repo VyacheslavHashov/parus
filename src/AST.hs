@@ -1,7 +1,7 @@
 module AST where
 
 import Data.Word
-import Data.Map as Map
+import qualified Data.Map as Map
 
 -- Types
 
@@ -11,6 +11,7 @@ data PrimType = TVoid | TBool | TInt | TUint | TFloat
 data Type = ValType PrimType -- types of values
           | FunType [PrimType] PrimType -- list of argument's types
                                         -- and type of a returning value
+    deriving Show
 
 -- Operators
 
@@ -65,30 +66,41 @@ data Value = VoidValue
            | IntValue Int
            | UintValue Word64
            | FloatValue Double
+    deriving Show
 
 -- | Map of functions and global scope
 
--- List af all variable names in code block
-type Scope = [Name]
-type FunTable = Map.Map Name CodeBlock
+type Scope = Map.Map Name Type
+type FunTable = Map.Map Name Function
+
+-- list of argument names
+data Function = Function [Name] CodeBlock
+    deriving Show
 
 data AST = AST { funTable :: FunTable
                , glScope :: Scope
                }
+    deriving Show
+
 data CodeBlock = CodeBlock { scope :: Scope
                            , instructions :: [Instruction]
                            }
+    deriving Show
+
 data Instruction = Assign Name Expr
                  | Return Expr
                  | IfBlock Expr CodeBlock
                  | IfElseBlock Expr CodeBlock CodeBlock
                  | WhileBlock Expr CodeBlock
                  | Expr Expr
+    deriving Show
 
-data Expr = BinOp Expr Expr
-          | UnOp Expr Expr
+data Expr = BinOp BinOpType Expr Expr
+          | UnOp UnOpType Expr
           | FunApply Name [Expr]
           | Ident Name
-          | Value
+          | Value Value
+    deriving Show
+
 
 

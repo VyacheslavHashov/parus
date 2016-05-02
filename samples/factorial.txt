@@ -1,0 +1,15 @@
+int main()
+{
+    return fact(10);
+}
+
+int fact(int n)
+{
+    int result;
+    result = 1;
+    while (n > 1 )
+    {
+        result = result * n;
+    }
+    return result;
+}

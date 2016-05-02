@@ -19,6 +19,8 @@ library
   hs-source-dirs: src
   exposed-modules:      Lexer
                       , Parser
+                      , TypeCheck
+                      , Eval
   build-depends:       base
                      , array
                      , mtl
