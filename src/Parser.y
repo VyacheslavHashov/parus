@@ -90,7 +90,7 @@ CodeBlock
     : '{' codeblock_ '}'        { reverse $2 }
 
 codeblock_ 
-    : Instruction               { [$1] }
+    : {- empty -}               { [] }
     | codeblock_ Instruction    { $2 : $1 }
 
 Instruction 
