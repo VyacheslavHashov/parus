@@ -63,8 +63,6 @@ mkCodeBlock cb args = let scope = map fromArg args
             (RawReturn rexpr) -> case rexpr of
                 Nothing -> go scope (Return (Value VoidValue):insts) xs
                 (Just expr) -> go scope (Return (mkExpr expr):insts) xs
-            (RawIfBlock expr cb) -> go scope (IfBlock (mkExpr expr)
-                                              (mkCodeBlock cb []):insts) xs
             (RawIfElseBlock expr cb1 cb2) -> go scope (IfElseBlock (mkExpr expr)
                                              (mkCodeBlock cb1 [])
                                              (mkCodeBlock cb2 []):insts) xs

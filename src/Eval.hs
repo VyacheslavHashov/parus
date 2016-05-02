@@ -50,13 +50,6 @@ evalInstruction (Assign name e) = do
     put $ Env funcs nScs
     pure VoidValue
 evalInstruction (Return e) = evalExpr e
-evalInstruction (IfBlock e cb) = do
-    b <- evalExpr e
-    case b of
-        BoolValue b -> if b
-                         then evalCodeBlock Map.empty cb
-                         else pure VoidValue
-        _ -> error "non-boolean value in if expression"
 evalInstruction (IfElseBlock e cb1 cb2 ) = do
     b <- evalExpr e
     case b of

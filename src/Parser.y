@@ -100,7 +100,7 @@ Instruction
     | return Expr ';'           { RawReturn $ Just $2 }
     | if '(' Expr ')' CodeBlock 
       else CodeBlock            { RawIfElseBlock $3 $5 $7 }
-    | if '(' Expr ')' CodeBlock { RawIfBlock $3 $5 }
+    | if '(' Expr ')' CodeBlock { RawIfElseBlock $3 $5 []}
     | while '(' Expr ')' 
       CodeBlock                 { RawWhileBlock $3 $5 }
     | Expr ';'                  { RawExpr $1 }

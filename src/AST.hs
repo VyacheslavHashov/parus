@@ -42,7 +42,6 @@ type RawCodeBlock = [RawInstruction]
 data RawInstruction = RawVarDecl Name PrimType
                     | RawAssign Name RawExpr
                     | RawReturn (Maybe RawExpr)
-                    | RawIfBlock RawExpr RawCodeBlock
                     | RawIfElseBlock RawExpr RawCodeBlock RawCodeBlock
                     | RawWhileBlock RawExpr RawCodeBlock
                     | RawExpr RawExpr
@@ -89,7 +88,6 @@ data CodeBlock = CodeBlock { scope :: Scope
 
 data Instruction = Assign Name Expr
                  | Return Expr
-                 | IfBlock Expr CodeBlock
                  | IfElseBlock Expr CodeBlock CodeBlock
                  | WhileBlock Expr CodeBlock
                  | Expr Expr
