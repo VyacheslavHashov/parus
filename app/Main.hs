@@ -4,6 +4,7 @@ import Lexer
 import Parser
 import TypeCheck
 import Eval
+import TAC
 
 main = do
     a <- readFile "samples/fib.txt"

@@ -22,6 +22,7 @@ library
                       , TypeCheck
                       , Eval
   other-modules:     AST
+                   , TAC
   build-depends:       base
                      , array
                      , mtl
