@@ -11,7 +11,7 @@ main = do
     print $ program c
 
 getAST = do
-    a <- readFile "samples/simple.txt"
+    a <- readFile "samples/factorial.txt"
     let c = either (const []) id $ scanner a
         d = either undefined id $ runExcept $ program c
     pure d

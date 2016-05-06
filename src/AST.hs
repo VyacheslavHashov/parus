@@ -24,67 +24,22 @@ data UnOpType = OpNegate | OpNot
     deriving Show
 
 type Name = String
-
--- Raw AST
--- results after parsing
-
-type RawProgram = [RawGlInstruction]
-
-data RawGlInstruction = RawGlVarDecl Name PrimType
-                      | RawFunDecl Name [RawArgDecl] RawCodeBlock PrimType
-                   deriving Show
-
-data RawArgDecl = RawArgDecl Name PrimType
-    deriving Show
-
-type RawCodeBlock = [RawInstruction]
-
-data RawInstruction = RawVarDecl Name PrimType
-                    | RawAssign Name RawExpr
-                    | RawReturn (Maybe RawExpr)
-                    | RawIfElseBlock RawExpr RawCodeBlock RawCodeBlock
-                    | RawWhileBlock RawExpr RawCodeBlock
-                    | RawExpr RawExpr
-                    deriving Show
-
-data RawExpr = RawBinOp BinOpType RawExpr RawExpr
-             | RawUnOp UnOpType RawExpr
-             | RawFunApply Name [RawExpr]
-             | RawLiteral String
-             | RawBoolLiteral Bool
-             | RawIdent Name
-          deriving Show
-
---
--- AST
---  after typechecking
---
-
-data Value = VoidValue
-           | BoolValue Bool
-           | IntValue Int
-           | UintValue Word64
-           | FloatValue Double
-    deriving Show
-
--- | Map of functions and global scope
-
-type Scope = Map.Map Name Type
 type FunTable = Map.Map Name Function
 
--- list of argument names
-data Function = Function [Name] CodeBlock
-    deriving Show
-
-data AST = AST { funTable :: FunTable
-               , glScope :: Scope
+-- AST
+data AST = AST { globalVars :: Map.Map Name PrimType
+               , functions :: FunTable
                }
     deriving Show
 
-data CodeBlock = CodeBlock { scope :: Scope
-                           , instructions :: [Instruction]
-                           }
+data Function = Function { fLocalVars :: Map.Map Name PrimType
+                         , fReturnType :: PrimType
+                         , fArgNames :: [Name]
+                         , fCodeBlock :: CodeBlock
+                         }
     deriving Show
+
+type CodeBlock = [Instruction]
 
 data Instruction = Assign Name Expr
                  | Return Expr
@@ -98,7 +53,12 @@ data Expr = BinOp BinOpType Expr Expr
           | FunApply Name [Expr]
           | Ident Name
           | Value Value
+          deriving Show
+
+data Value = VoidValue
+           | BoolValue Bool
+           | IntValue Int
+           | UintValue Word64
+           | FloatValue Double
+           | RawValue String
     deriving Show
-
-
-
