@@ -11,6 +11,7 @@ data PrimType = TVoid | TBool | TInt | TUint | TFloat
 data Type = ValType PrimType -- types of values
           | FunType [PrimType] PrimType -- list of argument's types
                                         -- and type of a returning value
+          | ReturnType PrimType -- type of a return expression
     deriving Show
 
 -- Operators
@@ -61,4 +62,39 @@ data Value = VoidValue
            | UintValue Word64
            | FloatValue Double
            | RawValue String
+    deriving Show
+-- Typed AST
+
+data TypedAST = TypedAST { tGlobalVars :: Map.Map Name Type
+                         , tFunctions :: Map.Map Name TFunction
+                         }
+    deriving Show
+
+data TFunction = TFunction { tfType :: Type
+                           , tfArgNames :: [Name]
+                           , tfCodeBlock :: TCodeBlock
+                           }
+    deriving Show
+
+type TCodeBlock = [TInstruction]
+
+data TInstruction = TAssign Name TExpr
+                  | TReturn TExpr
+                  | TIfElseBlock TExpr TCodeBlock TCodeBlock
+                  | TWhileBlock TExpr TCodeBlock
+                  | TExpr TExpr
+    deriving Show
+
+data TExpr = TBinOp PrimType BinOpType TExpr TExpr
+           | TUnOp PrimType UnOpType TExpr
+           | TFunApply PrimType Name [TExpr]
+           | TIdent PrimType Name
+           | TValue PrimType TValue
+          deriving Show
+
+data TValue = TVoidValue
+            | TBoolValue Bool
+            | TIntValue Int
+            | TUintValue Word64
+            | TFloatValue Double
     deriving Show
