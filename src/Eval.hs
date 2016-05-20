@@ -21,8 +21,8 @@ type Eval = State Env
 changeVar :: Name -> Value -> Env -> Env
 changeVar n v (Env fs scs sc gsc) =
     let (nSc, nGsc) = case (Map.lookup n sc, Map.lookup n gsc) of
-                          (Just _, _) -> (Map.insert n v sc, gsc)
-                          (Nothing, Just _) -> (sc, Map.insert n v gsc)
+                          (Just _, _)        -> (Map.insert n v sc, gsc)
+                          (Nothing, Just _)  -> (sc, Map.insert n v gsc)
                           (Nothing, Nothing) -> error $ "not in scope" ++ n
     in Env fs scs nSc nGsc
 
@@ -36,10 +36,10 @@ pullScope env@(Env _ scs _  _) = env { scopeStack = tail scs
 
 makeDefaultScope :: Function -> EvalScope
 makeDefaultScope (Function lVars _ _ _) = getDefault <$> lVars
-    where getDefault TVoid = VoidValue
-          getDefault TBool = BoolValue False
-          getDefault TInt = IntValue 0
-          getDefault TUint = UintValue 0
+    where getDefault TVoid  = VoidValue
+          getDefault TBool  = BoolValue False
+          getDefault TInt   = IntValue 0
+          getDefault TUint  = UintValue 0
           getDefault TFloat = FloatValue 0.0
 
 
@@ -55,7 +55,7 @@ evalCodeBlock :: CodeBlock -> Eval Value
 evalCodeBlock insts =
     case insts of
         [] -> pure VoidValue
-        _ -> last <$> mapM evalInstruction insts
+        _  -> last <$> mapM evalInstruction insts
 
 
 evalInstruction :: Instruction -> Eval Value
@@ -124,24 +124,24 @@ evalBinOp OpOr e1 e2 = logOp (||) e1 e2
 
 arOp :: (forall a. Num a => a -> a -> a) -> Value -> Value -> Value
 arOp op e1 e2 = case (e1, e2) of
-            (IntValue v1, IntValue v2) -> IntValue $ op v1 v2
-            (UintValue v1, UintValue v2) -> UintValue $ op v1 v2
+            (IntValue v1, IntValue v2)     -> IntValue $ op v1 v2
+            (UintValue v1, UintValue v2)   -> UintValue $ op v1 v2
             (FloatValue v1, FloatValue v2) -> FloatValue $ op v1 v2
             (v1,v2) -> error $ "type mismatch arOp" ++ show v1 ++ show v2
+
 logArOp :: (forall a. Ord a => a -> a -> Bool) -> Value -> Value -> Value
 logArOp op e1 e2 = case (e1, e2) of
-            (IntValue v1, IntValue v2) -> BoolValue $ op v1 v2
-            (UintValue v1, UintValue v2) -> BoolValue $ op v1 v2
+            (IntValue v1, IntValue v2)     -> BoolValue $ op v1 v2
+            (UintValue v1, UintValue v2)   -> BoolValue $ op v1 v2
             (FloatValue v1, FloatValue v2) -> BoolValue $ op v1 v2
-            (v1,v2) -> error $ "type mismatch logArOp" ++ (show v1) ++ (show v2)
+            (v1,v2) -> error $ "type mismatch logArOp" ++ show v1 ++ show v2
 logOp op e1 e2 = case (e1, e2) of
             (BoolValue v1, BoolValue v2) -> BoolValue $ op v1 v2
             (_,_) -> error "type mismatch logOp"
 
 evalUnOp :: UnOpType -> Value -> Value
-evalUnOp OpNot (BoolValue b) = BoolValue $ not b
-evalUnOp OpNot _ = error "type mismatch at not"
-evalUnOp OpNegate (IntValue v) = IntValue (-v)
-evalUnOp OpNegate (UintValue v) = UintValue (-v)
+evalUnOp OpNot (BoolValue b)     = BoolValue $ not b
+evalUnOp OpNot _                 = error "type mismatch at not"
+evalUnOp OpNegate (IntValue v)   = IntValue (-v)
+evalUnOp OpNegate (UintValue v)  = UintValue (-v)
 evalUnOp OpNegate (FloatValue v) = FloatValue (-v)
-

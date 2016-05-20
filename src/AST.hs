@@ -24,11 +24,11 @@ data UnOpType = OpNegate | OpNot
     deriving Show
 
 type Name = String
-type FunTable = Map.Map Name Function
+type FunMap = Map.Map Name Function
 
 -- AST
 data AST = AST { globalVars :: Map.Map Name PrimType
-               , functions :: FunTable
+               , functions :: FunMap
                }
     deriving Show
 

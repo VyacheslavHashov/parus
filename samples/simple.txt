@@ -11,10 +11,3 @@ void main()
     }
     return result;
 }
-
-int c;
-
-int b()
-{
-    c = 44;
-}
