@@ -58,6 +58,15 @@ data CheckEnv = CheckEnv { ceGlobalVars :: Map.Map Name Type
 
 type Check = ReaderT CheckEnv (Except TypeError)
 
+-- | Container that checks types before returning value
+data TypePropagation a = TypePropagation { typeProp :: Type -> Check a }
+
+typeCheck :: Type -> Check a -> TypePropagation a
+typeCheck t1 e = TypePropagation $ \t2 ->
+    if t1 == t2
+       then e
+       else throwError $ TypeMismatch t1 t2
+
 mkFunctionType :: Function -> Type
 mkFunctionType f = let rType    = fReturnType f
                        argTypes = map (fLocalVars f Map.!) $ fArgNames f
@@ -91,27 +100,42 @@ typeFunction gVars fTypes func = do
                    , tfCodeBlock = codeBlock
                    }
 
-checkCodeBlock :: Type -> CodeBlock -> Check TCodeBlock
+checkCodeBlock :: CodeBlock -> TypePropagation TCodeBlock
 checkCodeBlock = undefined
 
-checkInstruction :: Instruction -> Instruction
-checkInstruction (Assign name e) = Assign name $ typeExpr e
-checkInstruction (Return e) = Return $ typeExpr e
-checkInstruction (IfElseBlock e cb1 cb2) = IfElseBlock (typeExpr e)
-                                        (checkCodeBlock cb1) (checkCodeBlock cb2)
-checkInstruction (WhileBlock e cb) = WhileBlock (typeExpr e) (checkCodeBlock cb)
-checkInstruction (Expr e) = Expr $ typeExpr e
+checkInstruction :: Instruction -> TypePropagation TInstruction
+checkInstruction (Assign name e) = typeCheck (ValType TVoid) $ do
+    env <- ask
+    case Map.lookup name (ceLocalVars env `Map.union` ceGlobalVars env) of
+      Just t -> do
+          TAssign name <$> typeProp (checkExpr e) t
+      _ -> throwError $ NotInScopeVar name
 
-typeExpr :: Expr -> Expr
-typeExpr (BinOp op e1 e2) = BinOp op (typeExpr e1) (typeExpr e2)
-typeExpr (UnOp op e) = UnOp op $ typeExpr e
-typeExpr (FunApply name es) = FunApply name $ map typeExpr es
-typeExpr (Ident n) = Ident n
-typeExpr (Value v) = Value $ typeValue v
+checkInstruction (Return e) = undefined $ checkExpr e
+
+checkInstruction (IfElseBlock e cb1 cb2) = typeCheck (ValType TVoid) $
+    TIfElseBlock <$> typeProp (checkExpr e) (ValType TBool)
+                 <*> typeProp (checkCodeBlock cb1) (ValType TVoid)
+                 <*> typeProp (checkCodeBlock cb2) (ValType TVoid)
+
+checkInstruction (WhileBlock e cb) = typeCheck (ValType TVoid) $
+    TWhileBlock <$> typeProp (checkExpr e) (ValType TBool)
+                <*> typeProp (checkCodeBlock cb) (ValType TVoid)
+
+checkInstruction (Expr e) = typeCheck (ValType TVoid) $
+    TExpr <$> typeProp (checkExpr e) (ValType TVoid)
+
+checkExpr :: Expr -> TypePropagation TExpr
+checkExpr (BinOp op e1 e2) = BinOp op (checkExpr e1) (checkExpr e2)
+checkExpr (UnOp op e) = UnOp op $ checkExpr e
+checkExpr (FunApply name es) = FunApply name $ map checkExpr es
+checkExpr (Ident n) = Ident n
+checkExpr (Value v) = Value $ typeValue v
 
 typeValue :: Value -> Value
 typeValue (RawValue lit) = undefined
 typeValue v = v
+
 
 
 -- | This function does not check type constraints like numeric a =>
