@@ -6,13 +6,16 @@ import qualified Data.Map as Map
 -- Types
 
 data PrimType = TVoid | TBool | TInt | TUint | TFloat
-    deriving Show
+    deriving (Show, Eq)
 
 data Type = ValType PrimType -- types of values
           | FunType [PrimType] PrimType -- list of argument's types
                                         -- and type of a returning value
           | ReturnType PrimType -- type of a return expression
-    deriving Show
+    deriving (Show, Eq)
+
+-- | possible types of overloaded operator or literal
+type PolyType = [Type]
 
 -- Operators
 
@@ -33,7 +36,7 @@ data AST = AST { globalVars :: Map.Map Name PrimType
                }
     deriving Show
 
-data Function = Function { fLocalVars :: Map.Map Name PrimType
+data Function = Function { fLocalVars :: Map.Map Name PrimType -- args too
                          , fReturnType :: PrimType
                          , fArgNames :: [Name]
                          , fCodeBlock :: CodeBlock
@@ -58,9 +61,6 @@ data Expr = BinOp BinOpType Expr Expr
 
 data Value = VoidValue
            | BoolValue Bool
-           | IntValue Int
-           | UintValue Word64
-           | FloatValue Double
            | RawValue String
     deriving Show
 -- Typed AST
