@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
 module TypeCheck where
 
 import Control.Monad.Except
@@ -18,6 +17,7 @@ data TypeError = TypeMismatch Type Type
                | NotInScopeFun Name
                | NotInScopeVar Name
                | NoReturn
+               | MissingMain
     deriving Show
 
 
@@ -79,6 +79,7 @@ typeAST ast = do
     let gVars  = globalVars ast
         fTypes = mkFunctionType <$> functions ast
     fs <- traverse (typeFunction gVars fTypes) $ functions ast
+    when ("main" `Map.notMember` functions ast) $ throwError MissingMain
     pure TypedAST { tGlobalVars = gVars
                   , tFunctions = fs }
 
@@ -240,7 +241,7 @@ checkLogOp op e1 e2 = do
 -- | throws error
 resolvePolyTypes :: PolyType -> PolyType -> Check PolyType
 resolvePolyTypes t1 t2 = let t = t1 `intersect` t2
-                        in case t of
+                         in case t of
                              [] -> throwError $ UnresolvablePolyTypes t1 t2
                              _  -> pure t
 
@@ -249,7 +250,6 @@ uniPolyType :: PolyType -> Type
 uniPolyType pt = fromMaybe TVoid . msum $ map f ts where
     f t = if t `elem` pt then Just t else Nothing
     ts = [TBool, TUint, TInt, TFloat]
-
 
 isLiteralType :: Type -> String -> Bool
 isLiteralType TVoid _ = False
