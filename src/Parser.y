@@ -69,7 +69,7 @@ Program
                                    globalVars = Map.fromList $ fst $1
                                  , functions = Map.fromList $ snd $1 } }
 
-program_ :: { ([(Name, PrimType)], 
+program_ :: { ([(Name, Type)], 
                [(Name, Function)]) }
 program_
     : {- empty -}               { ([], []) }
@@ -83,7 +83,7 @@ program_
                                   , fCodeBlock = snd $7 }
                                   in second (($3, funDecl):) $1 }
 
-ArgDeclList :: { [(Name, PrimType)] }
+ArgDeclList :: { [(Name, Type)] }
     : {-empty -}                { [] }
     | ArgDecl ArgDeclList1      { $1 : $2 }
 
@@ -94,7 +94,7 @@ ArgDeclList1
 ArgDecl 
     : Type ident                { ($2, $1) }
 
-functionBlock :: { ([(Name, PrimType)], CodeBlock) }
+functionBlock :: { ([(Name, Type)], CodeBlock) }
 functionBlock
     : '{' functionBlock_ '}'    { second reverse $2 }
 

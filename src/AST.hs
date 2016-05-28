@@ -5,13 +5,10 @@ import qualified Data.Map as Map
 
 -- Types
 
-data PrimType = TVoid | TBool | TInt | TUint | TFloat
+data Type = TVoid | TBool | TInt | TUint | TFloat
     deriving (Show, Eq)
 
-data Type = ValType PrimType -- types of values
-          | FunType [PrimType] PrimType -- list of argument's types
-                                        -- and type of a returning value
-          | ReturnType PrimType -- type of a return expression
+data FunType = FunType [Type] Type
     deriving (Show, Eq)
 
 -- | possible types of overloaded operator or literal
@@ -31,13 +28,13 @@ type Name = String
 type FunMap = Map.Map Name Function
 
 -- AST
-data AST = AST { globalVars :: Map.Map Name PrimType
+data AST = AST { globalVars :: Map.Map Name Type
                , functions :: FunMap
                }
     deriving Show
 
-data Function = Function { fLocalVars :: Map.Map Name PrimType -- args too
-                         , fReturnType :: PrimType
+data Function = Function { fLocalVars :: Map.Map Name Type -- args too
+                         , fReturnType :: Type
                          , fArgNames :: [Name]
                          , fCodeBlock :: CodeBlock
                          }
@@ -85,11 +82,11 @@ data TInstruction = TAssign Name TExpr
                   | TExpr TExpr
     deriving Show
 
-data TExpr = TBinOp PrimType BinOpType TExpr TExpr
-           | TUnOp PrimType UnOpType TExpr
-           | TFunApply PrimType Name [TExpr]
-           | TIdent PrimType Name
-           | TValue PrimType TValue
+data TExpr = TBinOp Type BinOpType TExpr TExpr
+           | TUnOp Type UnOpType TExpr
+           | TFunApply Type Name [TExpr]
+           | TIdent Type Name
+           | TValue Type TValue
           deriving Show
 
 data TValue = TVoidValue
@@ -98,3 +95,7 @@ data TValue = TVoidValue
             | TUintValue Word64
             | TFloatValue Double
     deriving Show
+
+isReturnStmt :: TInstruction -> Bool
+isReturnStmt (TReturn _) = True
+isReturnStmt _           = False

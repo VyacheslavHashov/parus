@@ -192,7 +192,7 @@ tacInstruction (TAssign n e) = do
 
 tacInstruction (TReturn e) = do
     (v, pr) <- tacExpr e
-    let pt      = getPrimType e
+    let pt      = getType e
         code    = case pt of
                      TVoid -> RetVoid
                      _     -> Ret v
