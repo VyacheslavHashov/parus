@@ -64,7 +64,7 @@ data TacValue = TacBool Bool
 printTacProgram :: TacProgram -> String
 printTacProgram = unlines . map printTac
     where printTac (Tac mbl inst) = maybe "" (++":\n") mbl ++ printInst inst
-          printInst = show
+          printInst = ("    " ++) . show
 
 
 -- TODO: select opcode according to expression type
@@ -173,16 +173,17 @@ tacExprGen (TIdent pt name) = pure $ TacVar name
 tacExprGen (TValue pt v) = pure . TacLiteral $ tacValue v
 
 tacCodeBlock :: TCodeBlock -> TacGen TacProgram
-tacCodeBlock = (concat <$>) . traverse (setLabel . tacInstruction)
-    where
-        setLabel :: TacGen TacProgram -> TacGen TacProgram
-        setLabel pr = do
-              env <- get
-              case teNextLabel env of
-                Just label -> do
-                    put env{ teNextLabel = Nothing }
-                    setLabelOnFirst label <$> pr
-                _ -> pr
+tacCodeBlock [] = setLabel $ pure [Tac Nothing Nop]
+tacCodeBlock cb = concat <$> traverse (setLabel . tacInstruction) cb
+
+setLabel :: TacGen TacProgram -> TacGen TacProgram
+setLabel pr = do
+      env <- get
+      case teNextLabel env of
+        Just label -> do
+            put env{ teNextLabel = Nothing }
+            setLabelOnFirst label <$> pr
+        _ -> pr
 
 
 tacInstruction :: TInstruction -> TacGen TacProgram
@@ -198,6 +199,16 @@ tacInstruction (TReturn e) = do
                      _     -> Ret v
     pure $ pr ++ [Tac Nothing code]
 
+-- | if expr cb1 cb2 =>
+--
+--      t = expr
+--      condgoto t L1
+--      cb2
+--      goto L2
+--  L1:
+--      cb1
+--  L2:
+--      ...
 tacInstruction (TIfElseBlock e cb1 cb2) = do
     (v, pr) <- tacExpr e
     label1  <- genTempLabel
@@ -211,6 +222,16 @@ tacInstruction (TIfElseBlock e cb1 cb2) = do
            [ Tac Nothing $ Goto label2 ] ++
            cb1'
 
+-- | while expr cb =>
+--
+--  L1:
+--      t = expr
+--      t2 = NOT t
+--      condgoto t2 L2
+--      cb
+--      goto L1
+--  L2:
+--      ...
 tacInstruction (TWhileBlock e cb) = do
     (v, pr) <- tacExpr e
     label1  <- genTempLabel
