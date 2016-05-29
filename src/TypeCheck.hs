@@ -14,12 +14,11 @@ import AST
 data TypeError = TypeMismatch Type Type
                | PolyTypeMismatch Type PolyType
                | UnresolvablePolyTypes PolyType PolyType
-               | NotInScopeFun Name
-               | NotInScopeVar Name
+               | NotInScopeFun FunName
+               | NotInScopeVar VarName
                | NoReturn
                | MissingMain
     deriving Show
-
 
 class HasType a where
     getType :: a -> Type
@@ -38,6 +37,9 @@ instance HasType TValue where
     getType (TUintValue _)  = TUint
     getType (TFloatValue _) = TFloat
 
+mainName :: FunName
+mainName = FunName "main"
+
 numericTypes :: PolyType
 numericTypes = [ TInt
                , TUint
@@ -49,9 +51,9 @@ boolAndNumericTypes = [ TBool
                       , TUint
                       , TFloat]
 
-data CheckEnv = CheckEnv { ceGlobalVars :: Map.Map Name Type
-                         , ceFunctions :: Map.Map Name FunType
-                         , ceLocalVars :: Map.Map Name Type
+data CheckEnv = CheckEnv { ceGlobalVars :: Map.Map VarName Type
+                         , ceFunctions :: Map.Map FunName FunType
+                         , ceLocalVars :: Map.Map VarName Type
                          , ceReturnType :: Type
                          }
 
@@ -79,12 +81,12 @@ typeAST ast = do
     let gVars  = globalVars ast
         fTypes = mkFunctionType <$> functions ast
     fs <- traverse (typeFunction gVars fTypes) $ functions ast
-    when ("main" `Map.notMember` functions ast) $ throwError MissingMain
+    when (mainName `Map.notMember` functions ast) $ throwError MissingMain
     pure TypedAST { tGlobalVars = gVars
                   , tFunctions = fs }
 
-typeFunction :: Map.Map Name Type ->
-                Map.Map Name FunType ->
+typeFunction :: Map.Map VarName Type ->
+                Map.Map FunName FunType ->
                 Function ->
                 Except TypeError TFunction
 typeFunction gVars fTypes func = do

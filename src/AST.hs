@@ -25,27 +25,30 @@ data BinOpType
 data UnOpType = OpNegate | OpNot
     deriving Show
 
-type Name = String
-type FunMap = Map.Map Name Function
+newtype VarName  = VarName String
+    deriving (Show, Eq, Ord)
+newtype FunName = FunName String
+    deriving (Show, Eq, Ord)
+type FunMap     = Map.Map FunName Function
 
 -- Raw AST
 
 data AST = AST
-    { globalVars :: Map.Map Name Type
+    { globalVars :: Map.Map VarName Type
     , functions :: FunMap
     } deriving Show
 
 data Function = Function
-    { fLocalVars :: Map.Map Name Type -- args too
+    { fLocalVars :: Map.Map VarName Type -- args too
     , fReturnType :: Type
-    , fArgNames :: [Name]
+    , fArgNames :: [VarName]
     , fCodeBlock :: CodeBlock
     } deriving Show
 
 type CodeBlock = [Instruction]
 
 data Instruction
-    = Assign Name Expr
+    = Assign VarName Expr
     | Return Expr
     | IfElseBlock Expr CodeBlock CodeBlock
     | WhileBlock Expr CodeBlock
@@ -55,8 +58,8 @@ data Instruction
 data Expr
     = BinOp BinOpType Expr Expr
     | UnOp UnOpType Expr
-    | FunApply Name [Expr]
-    | Ident Name
+    | FunApply FunName [Expr]
+    | Ident VarName
     | Value Value
     deriving Show
 
@@ -69,20 +72,20 @@ data Value
 -- Typed AST
 
 data TypedAST = TypedAST
-    { tGlobalVars :: Map.Map Name Type
-    , tFunctions :: Map.Map Name TFunction
+    { tGlobalVars :: Map.Map VarName Type
+    , tFunctions :: Map.Map FunName TFunction
     } deriving Show
 
 data TFunction = TFunction
     { tfType :: Type
-    , tfArgNames :: [Name]
+    , tfArgNames :: [VarName]
     , tfCodeBlock :: TCodeBlock
     } deriving Show
 
 type TCodeBlock = [TInstruction]
 
 data TInstruction
-    = TAssign Name TExpr
+    = TAssign VarName TExpr
     | TReturn TExpr
     | TIfElseBlock TExpr TCodeBlock TCodeBlock
     | TWhileBlock TExpr TCodeBlock
@@ -92,8 +95,8 @@ data TInstruction
 data TExpr
     = TBinOp Type BinOpType TExpr TExpr
     | TUnOp Type UnOpType TExpr
-    | TFunApply Type Name [TExpr]
-    | TIdent Type Name
+    | TFunApply Type FunName [TExpr]
+    | TIdent Type VarName
     | TValue Type TValue
     deriving Show
 

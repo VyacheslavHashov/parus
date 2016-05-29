@@ -69,11 +69,11 @@ Program
                                    globalVars = Map.fromList $ fst $1
                                  , functions = Map.fromList $ snd $1 } }
 
-program_ :: { ([(Name, Type)], 
-               [(Name, Function)]) }
+program_ :: { ([(VarName, Type)], 
+               [(FunName, Function)]) }
 program_
     : {- empty -}               { ([], []) }
-    | program_ Type ident ';'   { first (($3, $2):) $1 }
+    | program_ Type ident ';'   { first ((VarName $3, $2):) $1 }
     | program_ Type ident 
      '(' ArgDeclList ')' 
      functionBlock             { let funDecl = Function {
@@ -81,9 +81,9 @@ program_
                                   , fReturnType = $2
                                   , fArgNames = map fst $5
                                   , fCodeBlock = snd $7 }
-                                  in second (($3, funDecl):) $1 }
+                                  in second ((FunName $3, funDecl):) $1 }
 
-ArgDeclList :: { [(Name, Type)] }
+ArgDeclList :: { [(VarName, Type)] }
     : {-empty -}                { [] }
     | ArgDecl ArgDeclList1      { $1 : $2 }
 
@@ -92,16 +92,16 @@ ArgDeclList1
     | ',' ArgDecl ArgDeclList1  { $2 : $3 }
 
 ArgDecl 
-    : Type ident                { ($2, $1) }
+    : Type ident                { (VarName $2, $1) }
 
-functionBlock :: { ([(Name, Type)], CodeBlock) }
+functionBlock :: { ([(VarName, Type)], CodeBlock) }
 functionBlock
     : '{' functionBlock_ '}'    { second reverse $2 }
 
 functionBlock_
     : {- empty -}               { ([], []) }
     | functionBlock_ Type 
-      ident ';'                 { first (($3, $2):) $1 }
+      ident ';'                 { first ((VarName $3, $2):) $1 }
     | functionBlock_ Instruction { second ($2:) $1 }
 
 CodeBlock 
@@ -112,7 +112,7 @@ codeblock_
     | codeblock_ Instruction    { $2 : $1 }
 
 Instruction 
-    : ident '=' Expr ';'        { Assign $1 $3 }
+    : ident '=' Expr ';'        { Assign (VarName $1) $3 }
     | return ';'                { Return $ Value VoidValue }
     | return Expr ';'           { Return $2 }
     | if '(' Expr ')' CodeBlock 
@@ -140,10 +140,10 @@ Expr
     | '-' Expr  %prec NEG       { UnOp OpNegate $2 }
     | '!' Expr                  { UnOp OpNot $2 }
 
-    | ident '(' ArgList ')'     { FunApply $1 $3 }
+    | ident '(' ArgList ')'     { FunApply (FunName $1) $3 }
     | literal                   { Value $ RawValue $1 }
     | boolLiteral               { Value $1 }
-    | ident                     { Ident $1 }
+    | ident                     { Ident (VarName $1) }
 
 
 ArgList 
