@@ -16,9 +16,10 @@ type PolyType = [Type]
 
 -- Operators
 
-data BinOpType = OpPlus | OpMinus | OpProduct | OpDivision
-               | OpGt | OpGte | OpLt | OpLte | OpEq | OpNeq
-               | OpAnd | OpOr
+data BinOpType
+    = OpPlus | OpMinus | OpProduct | OpDivision
+    | OpGt | OpGte | OpLt | OpLte | OpEq | OpNeq
+    | OpAnd | OpOr
     deriving Show
 
 data UnOpType = OpNegate | OpNot
@@ -27,73 +28,81 @@ data UnOpType = OpNegate | OpNot
 type Name = String
 type FunMap = Map.Map Name Function
 
--- AST
-data AST = AST { globalVars :: Map.Map Name Type
-               , functions :: FunMap
-               }
-    deriving Show
+-- Raw AST
 
-data Function = Function { fLocalVars :: Map.Map Name Type -- args too
-                         , fReturnType :: Type
-                         , fArgNames :: [Name]
-                         , fCodeBlock :: CodeBlock
-                         }
-    deriving Show
+data AST = AST
+    { globalVars :: Map.Map Name Type
+    , functions :: FunMap
+    } deriving Show
+
+data Function = Function
+    { fLocalVars :: Map.Map Name Type -- args too
+    , fReturnType :: Type
+    , fArgNames :: [Name]
+    , fCodeBlock :: CodeBlock
+    } deriving Show
 
 type CodeBlock = [Instruction]
 
-data Instruction = Assign Name Expr
-                 | Return Expr
-                 | IfElseBlock Expr CodeBlock CodeBlock
-                 | WhileBlock Expr CodeBlock
-                 | Expr Expr
+data Instruction
+    = Assign Name Expr
+    | Return Expr
+    | IfElseBlock Expr CodeBlock CodeBlock
+    | WhileBlock Expr CodeBlock
+    | Expr Expr
     deriving Show
 
-data Expr = BinOp BinOpType Expr Expr
-          | UnOp UnOpType Expr
-          | FunApply Name [Expr]
-          | Ident Name
-          | Value Value
-          deriving Show
-
-data Value = VoidValue
-           | BoolValue Bool
-           | RawValue String
+data Expr
+    = BinOp BinOpType Expr Expr
+    | UnOp UnOpType Expr
+    | FunApply Name [Expr]
+    | Ident Name
+    | Value Value
     deriving Show
+
+data Value
+    = VoidValue
+    | BoolValue Bool
+    | RawValue String
+    deriving Show
+
 -- Typed AST
 
-data TypedAST = TypedAST { tGlobalVars :: Map.Map Name Type
-                         , tFunctions :: Map.Map Name TFunction
-                         }
-    deriving Show
+data TypedAST = TypedAST
+    { tGlobalVars :: Map.Map Name Type
+    , tFunctions :: Map.Map Name TFunction
+    } deriving Show
 
-data TFunction = TFunction { tfType :: Type
-                           , tfArgNames :: [Name]
-                           , tfCodeBlock :: TCodeBlock
-                           }
-    deriving Show
+data TFunction = TFunction
+    { tfType :: Type
+    , tfArgNames :: [Name]
+    , tfCodeBlock :: TCodeBlock
+    } deriving Show
 
 type TCodeBlock = [TInstruction]
 
-data TInstruction = TAssign Name TExpr
-                  | TReturn TExpr
-                  | TIfElseBlock TExpr TCodeBlock TCodeBlock
-                  | TWhileBlock TExpr TCodeBlock
-                  | TExpr TExpr
+data TInstruction
+    = TAssign Name TExpr
+    | TReturn TExpr
+    | TIfElseBlock TExpr TCodeBlock TCodeBlock
+    | TWhileBlock TExpr TCodeBlock
+    | TExpr TExpr
     deriving Show
 
-data TExpr = TBinOp Type BinOpType TExpr TExpr
-           | TUnOp Type UnOpType TExpr
-           | TFunApply Type Name [TExpr]
-           | TIdent Type Name
-           | TValue Type TValue
-          deriving Show
+data TExpr
+    = TBinOp Type BinOpType TExpr TExpr
+    | TUnOp Type UnOpType TExpr
+    | TFunApply Type Name [TExpr]
+    | TIdent Type Name
+    | TValue Type TValue
+    deriving Show
 
-data TValue = TVoidValue
-            | TBoolValue Bool
-            | TIntValue Int
-            | TUintValue Word64
-            | TFloatValue Double
+data TValue
+    = TVoidValue
+    | TBoolValue Bool
+    | TIntValue Int
+    | TUintValue Word64
+    | TFloatValue Double
     deriving Show
 
 isReturnStmt :: TInstruction -> Bool
