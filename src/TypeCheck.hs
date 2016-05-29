@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
 module TypeCheck where
 
 import Control.Monad.Except
@@ -49,10 +48,13 @@ mainName :: FunName
 mainName = FunName "main"
 
 numericTypes :: PolyType
-numericTypes = [ TInt , TUint , TFloat]
+numericTypes = [TInt , TUint , TFloat]
 
 boolAndNumericTypes :: PolyType
-boolAndNumericTypes = [ TBool , TInt , TUint , TFloat]
+boolAndNumericTypes = [TBool , TInt , TUint , TFloat]
+
+toPolyType :: Type -> PolyType
+toPolyType t = [t]
 
 data CheckEnv = CheckEnv
     { ceGlobalVars :: Map.Map VarName Type
@@ -63,21 +65,31 @@ data CheckEnv = CheckEnv
 
 type Check = ReaderT CheckEnv (Except TypeError)
 
-typeCheck :: Type -> Type -> Check a -> Check a
-typeCheck t1 t2 e = if t1 == t2
-                        then e
-                        else throwError $ TypeMismatch t1 t2
+lookupVar :: VarName -> Check Type
+lookupVar name = do
+    env <- ask
+    case msum [ Map.lookup name $ ceLocalVars env
+              , Map.lookup name $ ceGlobalVars env] of
+        Just t -> pure t
+        _      -> throwError $ NotInScopeVar name
+
+lookupFunction :: FunName -> Check FunType
+lookupFunction name = do
+    mbt <- asks $ Map.lookup name . ceFunctions
+    case mbt of
+        Just t -> pure t
+        _      -> throwError $ NotInScopeFun name
 
 polyTypeCheck :: Type -> PolyType -> Check a -> Check a
-polyTypeCheck t pt e = if t `elem` pt
-                           then e
-                           else throwError $ PolyTypeMismatch t pt
+polyTypeCheck t pt e = when (t `notElem` pt) (throwError err) >> e
+  where err = PolyTypeMismatch t pt
 
 -- TODO move this function in another place
 mkFunctionType :: Function -> FunType
-mkFunctionType f = let rType    = fReturnType f
-                       argTypes = map (fLocalVars f Map.!) $ fArgNames f
-                    in FunType argTypes rType
+mkFunctionType f =
+    let rType    = fReturnType f
+        argTypes = map (fLocalVars f Map.!) $ fArgNames f
+    in FunType argTypes rType
 
 
 typeAST :: AST -> Except TypeError TypedAST
@@ -102,20 +114,18 @@ typeFunction gVars fTypes func = do
                               , ceReturnType = currType
                               }
 
-    codeBlock <- runReaderT (typeFunCodeBlock $ fCodeBlock func)
-                            checkEnv
+    codeBlock <- runReaderT (checkFunCodeBlock $ fCodeBlock func) checkEnv
     pure TFunction { tfType = currType
                    , tfArgNames = fArgNames func
                    , tfCodeBlock = codeBlock
                    }
 
 -- Check here if return statement exists in codeblock
-typeFunCodeBlock :: CodeBlock -> Check TCodeBlock
-typeFunCodeBlock cb = do
+checkFunCodeBlock :: CodeBlock -> Check TCodeBlock
+checkFunCodeBlock cb = do
     xs <- traverse (fmap f . checkInstruction) cb
-    if True `elem` map snd xs
-        then pure $ map fst xs
-        else throwError NoReturn
+    when (True `notElem` map snd xs) $ throwError NoReturn
+    pure $ map fst xs
   where f inst = (inst, isReturnStmt inst)
 
 checkCodeBlock :: CodeBlock -> Check TCodeBlock
@@ -123,14 +133,12 @@ checkCodeBlock = traverse checkInstruction
 
 checkInstruction :: Instruction -> Check TInstruction
 checkInstruction (Assign name e) = do
-    env <- ask
-    case Map.lookup name (ceLocalVars env `Map.union` ceGlobalVars env) of
-      Just t -> checkExpr e >>= \(pt, evalE) ->
-                    polyTypeCheck t pt . pure $ TAssign name (evalE t)
-      _      -> throwError $ NotInScopeVar name
+    t <- lookupVar name
+    (pt, evalE) <- checkExpr e
+    polyTypeCheck t pt . pure $ TAssign name (evalE t)
 
 checkInstruction (Return e) = do
-    retType     <- ceReturnType <$> ask
+    retType     <- asks ceReturnType
     (pt, evalE) <- checkExpr e
     polyTypeCheck retType pt . pure $ TReturn (evalE retType)
 
@@ -157,7 +165,8 @@ checkExpr (BinOp OpDivision e1 e2) = do
     (pt1, evalE1) <- checkExpr e1
     (pt2, evalE2) <- checkExpr e2
     polyTypeCheck TFloat pt1 . polyTypeCheck TFloat pt2 $
-        pure ([TFloat], \t -> TBinOp TFloat OpDivision (evalE1 t) (evalE2 t))
+        pure (toPolyType TFloat,
+              TBinOp TFloat OpDivision <$> evalE1 <*> evalE2)
 
 checkExpr (BinOp OpGt e1 e2)  = checkCompareOp OpGt e1 e2
 checkExpr (BinOp OpGte e1 e2) = checkCompareOp OpGte e1 e2
@@ -177,29 +186,23 @@ checkExpr (UnOp OpNegate e) = do
 checkExpr (UnOp OpNot e) = do
     (pt, evalE) <- checkExpr e
     polyTypeCheck TBool pt $
-        pure ([TBool], const $ TUnOp TBool OpNot (evalE TBool))
+        pure (toPolyType TBool, const $ TUnOp TBool OpNot (evalE TBool))
 
 checkExpr (FunApply name es) = do
-    env <- ask
-    case Map.lookup name $ ceFunctions env of
-      Just (FunType argts rt) -> do
-          ts <- traverse checkExpr es
-          let checkArgs = foldl (.) id $
-                  zipWith polyTypeCheck argts (map fst ts)
-          checkArgs $ pure ([rt],
-            const . TFunApply rt name $ zipWith ($) (map snd ts) argts)
-      _ -> throwError $ NotInScopeFun name
+    (FunType argts rt) <- lookupFunction name
+    ts <- traverse checkExpr es
+    checkArgs argts (map fst ts) $ pure (toPolyType rt,
+      const . TFunApply rt name $ zipWith ($) (map snd ts) argts)
+  where checkArgs argTs = foldl (.) id . zipWith polyTypeCheck argTs
 
 checkExpr (Ident name) = do
-    env <- ask
-    case Map.lookup name $ ceLocalVars env `Map.union` ceGlobalVars env of
-      Just t -> pure ([t], const $ TIdent t name)
-      _      -> throwError $ NotInScopeVar name
+    t <- lookupVar name
+    pure (toPolyType t, const $ TIdent t name)
 
-checkExpr (Value VoidValue)     = pure ([TVoid], const $
-                                       TValue TVoid TVoidValue)
-checkExpr (Value (BoolValue v)) = pure ([TBool], const $
-                                       TValue TBool (TBoolValue v))
+checkExpr (Value VoidValue)     = pure (toPolyType TVoid,
+                                        const $ TValue TVoid TVoidValue)
+checkExpr (Value (BoolValue v)) = pure (toPolyType TBool,
+                                        const $ TValue TBool (TBoolValue v))
 checkExpr (Value (RawValue s))  = pure (posTypes, castLiteral)
     where
         posTypes = filter (`isLiteralType` s) [TInt, TUint, TFloat]
@@ -221,10 +224,10 @@ checkCompareOp :: BinOpType -> Expr -> Expr -> Check (PolyType, Type -> TExpr)
 checkCompareOp op e1 e2 = do
     (pt1, evalE1) <- checkExpr e1
     (pt2, evalE2) <- checkExpr e2
-    t'  <- resolvePolyTypes pt1 numericTypes
+    t'  <- resolvePolyTypes pt1 boolAndNumericTypes
     t'' <- resolvePolyTypes t' pt2
     let t = uniPolyType t''
-    pure ([TBool], const $ TBinOp t op (evalE1 t) (evalE2 t))
+    pure (toPolyType TBool, const $ TBinOp t op (evalE1 t) (evalE2 t))
 
 checkEqualOp :: BinOpType -> Expr -> Expr -> Check (PolyType, Type -> TExpr)
 checkEqualOp op e1 e2 = do
@@ -233,22 +236,22 @@ checkEqualOp op e1 e2 = do
     t'  <- resolvePolyTypes pt1 boolAndNumericTypes
     t'' <- resolvePolyTypes t' pt2
     let t = uniPolyType t''
-    pure ([TBool], const $ TBinOp t op (evalE1 t) (evalE2 t))
+    pure (toPolyType TBool, const $ TBinOp t op (evalE1 t) (evalE2 t))
 
 checkLogOp :: BinOpType -> Expr -> Expr -> Check (PolyType, Type -> TExpr)
 checkLogOp op e1 e2 = do
     (pt1, evalE1) <- checkExpr e1
     (pt2, evalE2) <- checkExpr e2
     polyTypeCheck TBool pt1 . polyTypeCheck TBool pt2 $
-        pure ([TBool], const $ TBinOp TBool op (evalE1 TBool) (evalE2 TBool))
+        pure (toPolyType TBool,
+              const $ TBinOp TBool op (evalE1 TBool) (evalE2 TBool))
 
 -- | Returns the intersection between polytypes if it exists or
 -- | throws error
 resolvePolyTypes :: PolyType -> PolyType -> Check PolyType
-resolvePolyTypes t1 t2 = let t = t1 `intersect` t2
-                         in case t of
-                             [] -> throwError $ UnresolvablePolyTypes t1 t2
-                             _  -> pure t
+resolvePolyTypes t1 t2 = when (null t) (throwError err) >> pure t
+  where t   = t1 `intersect` t2
+        err = UnresolvablePolyTypes t1 t2
 
 -- | Selects the broadest type from a polytype
 uniPolyType :: PolyType -> Type
