@@ -11,13 +11,14 @@ import qualified Data.Map as Map
 import AST
 
 
-data TypeError = TypeMismatch Type Type
-               | PolyTypeMismatch Type PolyType
-               | UnresolvablePolyTypes PolyType PolyType
-               | NotInScopeFun FunName
-               | NotInScopeVar VarName
-               | NoReturn
-               | MissingMain
+data TypeError
+    = TypeMismatch Type Type
+    | PolyTypeMismatch Type PolyType
+    | UnresolvablePolyTypes PolyType PolyType
+    | NotInScopeFun FunName
+    | NotInScopeVar VarName
+    | NoReturn
+    | MissingMain
     deriving Show
 
 class HasType a where
@@ -37,25 +38,28 @@ instance HasType TValue where
     getType (TUintValue _)  = TUint
     getType (TFloatValue _) = TFloat
 
+defaultValue :: Type -> TValue
+defaultValue TVoid  = TVoidValue
+defaultValue TBool  = TBoolValue False
+defaultValue TInt   = TIntValue 0
+defaultValue TUint  = TUintValue 0
+defaultValue TFloat = TFloatValue 0.0
+
 mainName :: FunName
 mainName = FunName "main"
 
 numericTypes :: PolyType
-numericTypes = [ TInt
-               , TUint
-               , TFloat]
+numericTypes = [ TInt , TUint , TFloat]
 
 boolAndNumericTypes :: PolyType
-boolAndNumericTypes = [ TBool
-                      , TInt
-                      , TUint
-                      , TFloat]
+boolAndNumericTypes = [ TBool , TInt , TUint , TFloat]
 
-data CheckEnv = CheckEnv { ceGlobalVars :: Map.Map VarName Type
-                         , ceFunctions :: Map.Map FunName FunType
-                         , ceLocalVars :: Map.Map VarName Type
-                         , ceReturnType :: Type
-                         }
+data CheckEnv = CheckEnv
+    { ceGlobalVars :: Map.Map VarName Type
+    , ceFunctions :: Map.Map FunName FunType
+    , ceLocalVars :: Map.Map VarName Type
+    , ceReturnType :: Type
+    }
 
 type Check = ReaderT CheckEnv (Except TypeError)
 
@@ -82,7 +86,7 @@ typeAST ast = do
         fTypes = mkFunctionType <$> functions ast
     fs <- traverse (typeFunction gVars fTypes) $ functions ast
     when (mainName `Map.notMember` functions ast) $ throwError MissingMain
-    pure TypedAST { tGlobalVars = gVars
+    pure TypedAST { tGlobalVars = ((,) <*> defaultValue) <$> gVars
                   , tFunctions = fs }
 
 typeFunction :: Map.Map VarName Type ->
@@ -104,7 +108,6 @@ typeFunction gVars fTypes func = do
                    , tfArgNames = fArgNames func
                    , tfCodeBlock = codeBlock
                    }
-
 
 -- Check here if return statement exists in codeblock
 typeFunCodeBlock :: CodeBlock -> Check TCodeBlock

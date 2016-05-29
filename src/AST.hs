@@ -3,6 +3,14 @@ module AST where
 import Data.Word
 import qualified Data.Map as Map
 
+
+-- Names
+
+newtype VarName  = VarName String
+    deriving (Show, Eq, Ord)
+newtype FunName = FunName String
+    deriving (Show, Eq, Ord)
+
 -- Types
 
 data Type = TVoid | TBool | TInt | TUint | TFloat
@@ -25,17 +33,11 @@ data BinOpType
 data UnOpType = OpNegate | OpNot
     deriving Show
 
-newtype VarName  = VarName String
-    deriving (Show, Eq, Ord)
-newtype FunName = FunName String
-    deriving (Show, Eq, Ord)
-type FunMap     = Map.Map FunName Function
-
 -- Raw AST
 
 data AST = AST
     { globalVars :: Map.Map VarName Type
-    , functions :: FunMap
+    , functions :: Map.Map FunName Function
     } deriving Show
 
 data Function = Function
@@ -72,7 +74,7 @@ data Value
 -- Typed AST
 
 data TypedAST = TypedAST
-    { tGlobalVars :: Map.Map VarName Type
+    { tGlobalVars :: Map.Map VarName (Type, TValue)
     , tFunctions :: Map.Map FunName TFunction
     } deriving Show
 
